@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Send a chat message",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "sender": "user",
+        "name": "Тестовый пользователь",
+        "message": "Привет!"
+      },
+      "expectedStatus": 201
+    },
+    {
+      "name": "Get all chat messages",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}

@@ -8,9 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import AdminChat from './AdminChat';
 
 const FRIENDS_API = 'https://functions.poehali.dev/342aac3e-ef55-49fa-ace2-8dd5b1f449b6';
 const MESSAGES_API = 'https://functions.poehali.dev/608d960b-d134-4197-8349-2123b2614c46';
+const CHAT_API = 'https://functions.poehali.dev/c8aaa711-b2c8-4443-b41f-4fc1c70642dc';
 
 interface FriendRequest {
   id: number;
@@ -37,6 +39,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -260,6 +263,10 @@ const Admin = () => {
     );
   }
 
+  if (showChat) {
+    return <AdminChat password={password} />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1F2C] via-[#2D1B4E] to-[#1A1F2C] text-white p-4">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -268,6 +275,14 @@ const Admin = () => {
             Админ-панель
           </h1>
           <div className="flex gap-2">
+            <Button
+              onClick={() => setShowChat(true)}
+              variant="outline"
+              className="border-purple-500/30 text-white hover:bg-purple-500/20"
+            >
+              <Icon name="MessageCircle" size={18} className="mr-2" />
+              Открыть чат
+            </Button>
             <Button
               onClick={loadRequests}
               variant="outline"
