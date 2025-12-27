@@ -1,0 +1,15 @@
+{
+  "tests": [
+    {
+      "name": "Send a new message",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "name": "Иван",
+        "email": "ivan@example.com",
+        "message": "Привет! Это тестовое сообщение."
+      },
+      "expectedStatus": 201
+    }
+  ]
+}

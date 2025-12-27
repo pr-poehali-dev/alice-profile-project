@@ -13,15 +13,22 @@ import { useToast } from '@/hooks/use-toast';
 
 const FRIENDS_API = 'https://functions.poehali.dev/342aac3e-ef55-49fa-ace2-8dd5b1f449b6';
 const UPLOAD_API = 'https://functions.poehali.dev/0d76f698-bc49-496e-8b1d-76fd4a46f09f';
+const MESSAGES_API = 'https://functions.poehali.dev/608d960b-d134-4197-8349-2123b2614c46';
 
 const Index = () => {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     avatar: null as File | null
+  });
+  const [messageData, setMessageData] = useState({
+    name: '',
+    email: '',
+    message: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,6 +98,38 @@ const Index = () => {
     }
   };
 
+  const handleMessageSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(MESSAGES_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(messageData)
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Сообщение отправлено! ✉️",
+          description: "Алиса получит ваше сообщение",
+        });
+        setIsMessageDialogOpen(false);
+        setMessageData({ name: '', email: '', message: '' });
+      } else {
+        throw new Error('Failed to submit');
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось отправить сообщение. Попробуйте ещё раз.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1F2C] via-[#2D1B4E] to-[#1A1F2C] text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1),transparent_50%)] pointer-events-none" />
@@ -132,6 +171,82 @@ const Index = () => {
                       +7 909 756 21 02
                     </Button>
                   </a>
+                  
+                  <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg transition-all duration-300 hover:scale-105">
+                        <Icon name="MessageCircle" size={18} className="mr-2" />
+                        Написать сообщение
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-gradient-to-br from-[#2D1B4E] to-[#1A1F2C] border-purple-500/30 text-white max-w-md">
+                      <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                          Написать сообщение
+                        </DialogTitle>
+                        <DialogDescription className="text-gray-300">
+                          Оставьте сообщение для Алисы
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <form onSubmit={handleMessageSubmit} className="space-y-4 mt-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="msg-name" className="text-purple-300">Ваше имя</Label>
+                          <Input
+                            id="msg-name"
+                            placeholder="Введите ваше имя"
+                            value={messageData.name}
+                            onChange={(e) => setMessageData({ ...messageData, name: e.target.value })}
+                            required
+                            className="bg-white/10 border-purple-500/30 text-white placeholder:text-gray-400 focus:border-purple-400"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="msg-email" className="text-purple-300">Email (необязательно)</Label>
+                          <Input
+                            id="msg-email"
+                            type="email"
+                            placeholder="your@email.com"
+                            value={messageData.email}
+                            onChange={(e) => setMessageData({ ...messageData, email: e.target.value })}
+                            className="bg-white/10 border-purple-500/30 text-white placeholder:text-gray-400 focus:border-purple-400"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="msg-text" className="text-purple-300">Ваше сообщение</Label>
+                          <Textarea
+                            id="msg-text"
+                            placeholder="Напишите сообщение..."
+                            value={messageData.message}
+                            onChange={(e) => setMessageData({ ...messageData, message: e.target.value })}
+                            required
+                            rows={5}
+                            className="bg-white/10 border-purple-500/30 text-white placeholder:text-gray-400 focus:border-purple-400 resize-none"
+                          />
+                        </div>
+
+                        <Button
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <Icon name="Loader2" size={18} className="mr-2 animate-spin" />
+                              Отправка...
+                            </>
+                          ) : (
+                            <>
+                              <Icon name="Send" size={18} className="mr-2" />
+                              Отправить
+                            </>
+                          )}
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                   
                   <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>

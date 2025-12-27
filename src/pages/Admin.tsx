@@ -5,10 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 
 const FRIENDS_API = 'https://functions.poehali.dev/342aac3e-ef55-49fa-ace2-8dd5b1f449b6';
+const MESSAGES_API = 'https://functions.poehali.dev/608d960b-d134-4197-8349-2123b2614c46';
 
 interface FriendRequest {
   id: number;
@@ -19,11 +21,21 @@ interface FriendRequest {
   created_at: string;
 }
 
+interface Message {
+  id: number;
+  name: string;
+  email: string | null;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 const Admin = () => {
   const { toast } = useToast();
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -41,6 +53,16 @@ const Admin = () => {
       if (response.ok) {
         const data = await response.json();
         setRequests(data);
+        
+        const msgResponse = await fetch(MESSAGES_API, {
+          method: 'GET',
+          headers: { 'X-Admin-Password': password }
+        });
+        if (msgResponse.ok) {
+          const msgData = await msgResponse.json();
+          setMessages(msgData);
+        }
+        
         setIsAuthenticated(true);
         toast({
           title: "Вход выполнен! ✅",
@@ -68,17 +90,23 @@ const Admin = () => {
     try {
       const response = await fetch(FRIENDS_API, {
         method: 'GET',
-        headers: {
-          'X-Admin-Password': password
-        }
+        headers: { 'X-Admin-Password': password }
       });
-
       if (response.ok) {
         const data = await response.json();
         setRequests(data);
       }
+
+      const msgResponse = await fetch(MESSAGES_API, {
+        method: 'GET',
+        headers: { 'X-Admin-Password': password }
+      });
+      if (msgResponse.ok) {
+        const msgData = await msgResponse.json();
+        setMessages(msgData);
+      }
     } catch (error) {
-      console.error('Failed to load requests:', error);
+      console.error('Failed to load data:', error);
     }
   };
 
@@ -113,9 +141,7 @@ const Admin = () => {
     try {
       const response = await fetch(`${FRIENDS_API}?id=${id}`, {
         method: 'DELETE',
-        headers: {
-          'X-Admin-Password': password
-        }
+        headers: { 'X-Admin-Password': password }
       });
 
       if (response.ok) {
@@ -129,6 +155,52 @@ const Admin = () => {
       toast({
         title: "Ошибка",
         description: "Не удалось удалить заявку",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleMessageRead = async (id: number, is_read: boolean) => {
+    try {
+      const response = await fetch(MESSAGES_API, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Password': password
+        },
+        body: JSON.stringify({ id, is_read })
+      });
+
+      if (response.ok) {
+        loadRequests();
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить статус",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleMessageDelete = async (id: number) => {
+    try {
+      const response = await fetch(`${MESSAGES_API}?id=${id}`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-Password': password }
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Сообщение удалено",
+          description: "Сообщение успешно удалено из базы",
+        });
+        loadRequests();
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить сообщение",
         variant: "destructive"
       });
     }
@@ -193,7 +265,7 @@ const Admin = () => {
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Заявки в друзья
+            Админ-панель
           </h1>
           <div className="flex gap-2">
             <Button
@@ -215,6 +287,19 @@ const Admin = () => {
           </div>
         </div>
 
+        <Tabs defaultValue="requests" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-[#2D1B4E]/80">
+            <TabsTrigger value="requests" className="data-[state=active]:bg-purple-500/50">
+              <Icon name="UserPlus" size={18} className="mr-2" />
+              Заявки в друзья ({requests.length})
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="data-[state=active]:bg-purple-500/50">
+              <Icon name="MessageCircle" size={18} className="mr-2" />
+              Сообщения ({messages.filter(m => !m.is_read).length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="requests" className="mt-6">
         {requests.length === 0 ? (
           <Card className="bg-gradient-to-br from-[#2D1B4E]/80 to-[#1A1F2C]/80 backdrop-blur-xl border-purple-500/20">
             <CardContent className="p-12 text-center">
@@ -295,6 +380,87 @@ const Admin = () => {
             ))}
           </div>
         )}
+          </TabsContent>
+
+          <TabsContent value="messages" className="mt-6">
+        {messages.length === 0 ? (
+          <Card className="bg-gradient-to-br from-[#2D1B4E]/80 to-[#1A1F2C]/80 backdrop-blur-xl border-purple-500/20">
+            <CardContent className="p-12 text-center">
+              <Icon name="MessageCircle" size={48} className="mx-auto mb-4 text-purple-400" />
+              <p className="text-gray-300 text-lg">Пока нет сообщений</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {messages.map((message) => (
+              <Card key={message.id} className="bg-gradient-to-br from-[#2D1B4E]/80 to-[#1A1F2C]/80 backdrop-blur-xl border-purple-500/20 animate-fade-in">
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xl font-bold text-white">{message.name}</h3>
+                          {!message.is_read && (
+                            <Badge className="bg-blue-500/50">Новое</Badge>
+                          )}
+                        </div>
+                        {message.email && (
+                          <p className="text-sm text-purple-300">
+                            <Icon name="Mail" size={14} className="inline mr-1" />
+                            {message.email}
+                          </p>
+                        )}
+                        <p className="text-sm text-gray-400">
+                          <Icon name="Calendar" size={14} className="inline mr-1" />
+                          {new Date(message.created_at).toLocaleString('ru-RU')}
+                        </p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        {!message.is_read && (
+                          <Button
+                            onClick={() => handleMessageRead(message.id, true)}
+                            variant="outline"
+                            size="sm"
+                            className="border-green-500/50 text-green-400 hover:bg-green-500/20"
+                          >
+                            <Icon name="CheckCheck" size={16} className="mr-1" />
+                            Прочитано
+                          </Button>
+                        )}
+                        {message.is_read && (
+                          <Button
+                            onClick={() => handleMessageRead(message.id, false)}
+                            variant="outline"
+                            size="sm"
+                            className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
+                          >
+                            <Icon name="Archive" size={16} className="mr-1" />
+                            Не прочитано
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => handleMessageDelete(message.id)}
+                          variant="outline"
+                          size="sm"
+                          className="border-red-500/50 text-red-400 hover:bg-red-500/20"
+                        >
+                          <Icon name="Trash2" size={16} />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 rounded-lg p-4 border border-purple-500/20">
+                      <p className="text-gray-200 whitespace-pre-wrap">{message.message}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
