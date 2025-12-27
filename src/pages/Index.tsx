@@ -11,23 +11,78 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 
+const FRIENDS_API = 'https://functions.poehali.dev/342aac3e-ef55-49fa-ace2-8dd5b1f449b6';
+const UPLOAD_API = 'https://functions.poehali.dev/0d76f698-bc49-496e-8b1d-76fd4a46f09f';
+
 const Index = () => {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     avatar: null as File | null
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Запрос отправлен! 🎉",
-      description: "Алиса рассмотрит вашу заявку в друзья",
-    });
-    setIsDialogOpen(false);
-    setFormData({ name: '', description: '', avatar: null });
+    setIsSubmitting(true);
+
+    try {
+      let avatarUrl = null;
+
+      if (formData.avatar) {
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(formData.avatar!);
+        });
+        const base64 = await base64Promise;
+
+        const uploadResponse = await fetch(UPLOAD_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            file: base64,
+            fileName: formData.avatar.name
+          })
+        });
+
+        if (uploadResponse.ok) {
+          const uploadData = await uploadResponse.json();
+          avatarUrl = uploadData.url;
+        }
+      }
+
+      const response = await fetch(FRIENDS_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          description: formData.description,
+          avatar_url: avatarUrl
+        })
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Заявка отправлена! 🎉",
+          description: "Алиса рассмотрит вашу заявку в друзья",
+        });
+        setIsDialogOpen(false);
+        setFormData({ name: '', description: '', avatar: null });
+      } else {
+        throw new Error('Failed to submit');
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось отправить заявку. Попробуйте ещё раз.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,10 +197,15 @@ const Index = () => {
 
                         <Button 
                           type="submit" 
-                          className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white shadow-lg"
+                          disabled={isSubmitting}
+                          className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white shadow-lg disabled:opacity-50"
                         >
-                          <Icon name="Send" size={18} className="mr-2" />
-                          Отправить заявку
+                          {isSubmitting ? (
+                            <Icon name="Loader2" size={18} className="mr-2 animate-spin" />
+                          ) : (
+                            <Icon name="Send" size={18} className="mr-2" />
+                          )}
+                          {isSubmitting ? 'Отправка...' : 'Отправить заявку'}
                         </Button>
                       </form>
                     </DialogContent>

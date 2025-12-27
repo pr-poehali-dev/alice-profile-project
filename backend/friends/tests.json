@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "Create friend request",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "name": "Test User",
+        "description": "Hello, I want to be friends!",
+        "avatar_url": "https://example.com/avatar.jpg"
+      },
+      "expectedStatus": 201,
+      "expectedBody": {
+        "message": "Friend request created"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get requests without auth",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401
+    }
+  ]
+}
